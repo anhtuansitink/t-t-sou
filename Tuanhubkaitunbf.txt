@@ -1,5 +1,53 @@
 loadstring(game:HttpGet("https://raw.githubusercontent.com/fakekuri/NightXmixother/main/jointeam.lua"))()
 
+local remote, idremote
+for _, v in next, ({game.ReplicatedStorage.Util, game.ReplicatedStorage.Common, game.ReplicatedStorage.Remotes, game.ReplicatedStorage.Assets, game.ReplicatedStorage.FX}) do
+    for _, n in next, v:GetChildren() do
+        if n:IsA("RemoteEvent") and n:GetAttribute("Id") then
+            remote, idremote = n, n:GetAttribute("Id")
+        end
+    end
+    v.ChildAdded:Connect(function(n)
+        if n:IsA("RemoteEvent") and n:GetAttribute("Id") then
+            remote, idremote = n, n:GetAttribute("Id")
+        end
+    end)
+end
+task.spawn(function()
+    while task.wait(0.05) do
+        local char = game.Players.LocalPlayer.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local parts = {}
+        for _, x in ipairs({workspace.Enemies, workspace.Characters}) do
+            for _, v in ipairs(x and x:GetChildren() or {}) do
+                local hrp = v:FindFirstChild("HumanoidRootPart")
+                local hum = v:FindFirstChild("Humanoid")
+                if v ~= char and hrp and hum and hum.Health > 0 and (hrp.Position - root.Position).Magnitude <= 60 then
+                    for _, _v in ipairs(v:GetChildren()) do
+                        if _v:IsA("BasePart") and (hrp.Position - root.Position).Magnitude <= 60 then
+                            parts[#parts+1] = {v, _v}
+                        end
+                    end
+                end
+            end
+        end
+        local tool = char:FindFirstChildOfClass("Tool")
+        if #parts > 0 and tool and (tool:GetAttribute("WeaponType") == "Melee" or tool:GetAttribute("WeaponType") == "Sword") then
+            pcall(function()
+                require(game.ReplicatedStorage.Modules.Net):RemoteEvent("RegisterHit", true)
+                game.ReplicatedStorage.Modules.Net["RE/RegisterAttack"]:FireServer()
+                local head = parts[1][1]:FindFirstChild("Head")
+                if not head then return end
+                game.ReplicatedStorage.Modules.Net["RE/RegisterHit"]:FireServer(head, parts, {}, tostring(game.Players.LocalPlayer.UserId):sub(2, 4) .. tostring(coroutine.running()):sub(11, 15))
+                cloneref(remote):FireServer(string.gsub("RE/RegisterHit", ".", function(c)
+                    return string.char(bit32.bxor(string.byte(c), math.floor(workspace:GetServerTimeNow() / 10 % 10) + 1))
+                end),
+                bit32.bxor(idremote + 909090, game.ReplicatedStorage.Modules.Net.seed:InvokeServer() * 2), head, parts)
+            end)
+        end
+    end
+end)
+
 -- local sitink
 local sitinklib = loadstring(game:HttpGet("https://github.com/ErutTheTeru/uilibrary/blob/main/Sitink%20Lib/Source.lua?raw=true"))()
 local Notify = sitinklib:Notify({
@@ -3906,3 +3954,62 @@ spawn(function()
 		end)
 	end)
 StopTween(_G.Auto_Dungeon)
+
+
+local player = game.Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "DoughOverlay"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local background = Instance.new("Frame")
+background.Size = UDim2.new(1, 0, 1, 0)
+background.BackgroundColor3 = Color3.new(0, 0, 0)
+background.BackgroundTransparency = 1.0
+background.Visible = true
+background.Parent = gui
+
+local timeLabel = Instance.new("TextLabel")
+timeLabel.Size = UDim2.new(1, 0, 0.04, 0)
+timeLabel.Position = UDim2.new(0, 0, 0.9, 0)
+timeLabel.BackgroundTransparency = 1
+timeLabel.Text = "Time: 0 Hours 0 Minutes 0 Seconds"
+timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+timeLabel.TextScaled = true
+timeLabel.Font = Enum.Font.FredokaOne
+timeLabel.Parent = background
+
+local infoLabel = Instance.new("TextLabel")
+infoLabel.Size = UDim2.new(0.95, 0, 0.05, 0)
+infoLabel.Position = UDim2.new(0.025, 0, 0.94, 0)
+infoLabel.BackgroundTransparency = 1
+infoLabel.TextColor3 = Color3.new(1, 1, 1)
+infoLabel.TextScaled = true
+infoLabel.Font = Enum.Font.FredokaOne
+infoLabel.Text = "Loading..."
+infoLabel.Parent = background
+
+spawn(function()
+	while wait(1) do
+		pcall(function()
+			local level = player.Data.Level.Value
+			local beli = player.Data.Beli.Value
+			local frags = player.Data.Fragments.Value
+			infoLabel.Text = "Player: " .. player.DisplayName .. " | Level: " .. level .. " | Beli: " .. beli .. " | Fragments: " .. frags
+		end)
+	end
+end)
+
+
+local seconds = 0
+spawn(function()
+	while wait(1) do
+		seconds += 1
+		local hrs = math.floor(seconds / 3600)
+		local mins = math.floor((seconds % 3600) / 60)
+		local secs = seconds % 60
+		timeLabel.Text = "Time: " .. hrs .. " Hours " .. mins .. " Minutes " .. secs .. " Seconds"
+	end
+end)
