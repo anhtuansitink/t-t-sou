@@ -1,0 +1,60 @@
+local player = game.Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "DoughOverlay"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local background = Instance.new("Frame")
+background.Size = UDim2.new(1, 0, 1, 0)
+[cite_start]-- Thay đổi từ màu đen (0, 0, 0) sang màu trắng (1, 1, 1) [cite: 1]
+background.BackgroundColor3 = Color3.new(1, 1, 1)
+[cite_start]-- Giảm độ trong suốt để lớp phủ màu trắng hiển thị, tạo hiệu ứng sáng hơn [cite: 1]
+-- Giá trị 0.8 là một mức trong suốt vừa phải, bạn có thể điều chỉnh từ 0.5 đến 0.9.
+background.BackgroundTransparency = 0.8 
+[cite_start]background.Visible = true [cite: 1]
+[cite_start]background.Parent = gui [cite: 1]
+
+local timeLabel = Instance.new("TextLabel")
+[cite_start]timeLabel.Size = UDim2.new(1, 0, 0.04, 0) [cite: 1]
+[cite_start]timeLabel.Position = UDim2.new(0, 0, 0.9, 0) [cite: 1]
+[cite_start]timeLabel.BackgroundTransparency = 1 [cite: 1]
+[cite_start]timeLabel.Text = "Time: 0 Hours 0 Minutes 0 Seconds" [cite: 1]
+[cite_start]timeLabel.TextColor3 = Color3.fromRGB(255, 255, 255) [cite: 1]
+[cite_start]timeLabel.TextScaled = true [cite: 1]
+[cite_start]timeLabel.Font = Enum.Font.FredokaOne [cite: 1]
+[cite_start]timeLabel.Parent = background [cite: 1]
+
+local infoLabel = Instance.new("TextLabel")
+[cite_start]infoLabel.Size = UDim2.new(0.95, 0, 0.05, 0) [cite: 1]
+[cite_start]infoLabel.Position = UDim2.new(0.025, 0, 0.94, 0) [cite: 1]
+[cite_start]infoLabel.BackgroundTransparency = 1 [cite: 1]
+[cite_start]infoLabel.TextColor3 = Color3.new(1, 1, 1) [cite: 1]
+[cite_start]infoLabel.TextScaled = true [cite: 1]
+[cite_start]infoLabel.Font = Enum.Font.FredokaOne [cite: 1]
+[cite_start]infoLabel.Text = "Loading..." [cite: 1]
+[cite_start]infoLabel.Parent = background [cite: 1]
+
+spawn(function()
+	while wait(1) do
+		pcall(function()
+			[cite_start]local level = player.Data.Level.Value [cite: 2]
+			[cite_start]local beli = player.Data.Beli.Value [cite: 2]
+			[cite_start]local frags = player.Data.Fragments.Value [cite: 2]
+			[cite_start]infoLabel.Text = "Player: " .. player.DisplayName .. " | Level: " .. level .. " | Beli: " .. beli .. " | Fragments: " .. frags [cite: 3]
+		end)
+	end
+end)
+
+
+[cite_start]local seconds = 0 [cite: 3]
+spawn(function()
+	while wait(1) do
+		[cite_start]seconds += 1 [cite: 3]
+		[cite_start]local hrs = math.floor(seconds / 3600) [cite: 3]
+		[cite_start]local mins = math.floor((seconds % 3600) / 60) [cite: 3]
+		[cite_start]local secs = seconds % 60 [cite: 3]
+		[cite_start]timeLabel.Text = "Time: " .. hrs .. " Hours " .. mins .. " Minutes " .. secs .. " Seconds" [cite: 3]
+	end
+end)
