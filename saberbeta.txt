@@ -1,0 +1,242 @@
+-- ==========================================================
+-- I. KHAI BÁO & CƠ CHẾ BẬT/TẮT (TOGGLE)
+-- ==========================================================
+_G.Auto_Saber = true             -- [QUAN TRỌNG] Trạng thái mặc định: BẬT
+_G.AutoFarm = true               -- [ĐÃ THAY ĐỔI] Cờ điều khiển Auto Farm chung. Mặc định là BẬT.
+_G.AutoSaberHop = true           -- Cờ cho Server Hop (cần hàm hop ngoại vi)
+_G.SelectWeapon = "Melee"        -- Đặt vũ khí ưu tiên để tấn công Boss
+
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local CommF = ReplicatedStorage.Remotes.CommF_
+
+-- Định nghĩa các hàm giả lập/phụ thuộc (CẦN được định nghĩa đầy đủ ở nơi khác)
+local function EquipWeapon(weaponName)
+    -- Logic thực tế để trang bị vũ khí sẽ ở đây
+    print(string.format("[Auto Saber] Trang bị vũ khí: %s", weaponName))
+end
+
+local function AutoHaki()
+    -- Logic thực tế để kích hoạt Haki sẽ ở đây
+end
+
+-- Hàm BẬT/TẮT chính: Đảo ngược trạng thái _G.Auto_Saber
+local function ToggleAutoSaber()
+    _G.Auto_Saber = not _G.Auto_Saber
+    local status = _G.Auto_Saber and "ĐANG BẬT" or "ĐÃ TẮT"
+    print(string.format("[Auto Saber] Tự động làm Quest Saber: %s", status))
+end
+
+-- Lắng nghe sự kiện nhấn phím (Phím 'E' để bật/tắt)
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    
+    if input.KeyCode == Enum.KeyCode.E then 
+        ToggleAutoSaber()
+    end
+end)
+
+
+-- ==========================================================
+-- II. LOGIC QUEST CHÍNH (Tích Hợp Tạm Dừng/Khôi Phục Farm)
+-- ==========================================================
+task.spawn(function()
+    while task.wait(0.5) do -- Giảm tần suất check để tiết kiệm tài nguyên
+        
+        -- Lấy RootPart của người chơi
+        local LocalChar = LocalPlayer.Character
+        local RootPart = LocalChar and LocalChar:FindFirstChild("HumanoidRootPart")
+        if not RootPart then return end
+
+        -- Helper function: Chỉ TP nếu người chơi ở xa (> 25 studs)
+        local function TeleportIfFar(targetCFrame, threshold)
+            local distance = (RootPart.Position - targetCFrame.p).Magnitude
+            if distance > (threshold or 25) then
+                RootPart.CFrame = targetCFrame
+                task.wait(1.5) -- Độ trễ an toàn sau TP
+                return true
+            end
+            return false
+        end
+        
+        -- Điều kiện để bắt đầu Quest Saber
+        if _G.Auto_Saber and LocalPlayer.Data.Level.Value >= 180 then
+            
+            -- BƯỚC 1: TẠM DỪNG Auto Farm chung
+            if _G.AutoFarm == true then
+                _G.AutoFarm = false -- Dùng _G.AutoFarm
+                print("[Auto Saber] TẠM DỪNG (PAUSED) Auto Farm chung để làm Quest Saber.")
+            end
+
+            pcall(function()
+                
+                local Map = Workspace.Map
+                
+                -- [ 1. Quest Plates (Jungle) ]
+                if Map.Jungle.Final.Part.Transparency == 0 then
+                    
+                    if Map.Jungle.QuestPlates.Door.Transparency == 0 then
+                        print("[Auto Saber] Đang kích hoạt 5 tấm Plate...")
+                        
+                        -- Teleport và kích hoạt 5 tấm Plate. Dùng TP thẳng, cố ý không dùng TeleportIfFar 
+                        -- ở đây vì đây là chuỗi hành động liên tục, cần phải TP
+                        RootPart.CFrame = Map.Jungle.QuestPlates.Plate1.Button.CFrame
+                        task.wait(1.5) 
+                        RootPart.CFrame = Map.Jungle.QuestPlates.Plate2.Button.CFrame
+                        task.wait(1.5) 
+                        RootPart.CFrame = Map.Jungle.QuestPlates.Plate3.Button.CFrame
+                        task.wait(1.5) 
+                        RootPart.CFrame = Map.Jungle.QuestPlates.Plate4.Button.CFrame
+                        task.wait(1.5) 
+                        RootPart.CFrame = Map.Jungle.QuestPlates.Plate5.Button.CFrame
+                        task.wait(2) 
+                    else
+                        -- Plates done, Teleport đến vị trí trước cửa (Cửa đã mở, đợi vào trong)
+                        local targetCFrame = CFrame.new(-1613, 37, 149) * CFrame.Angles(0, math.rad(110), 0)
+                        print("[Auto Saber] Đã mở Plate, Teleport đến trước cửa.")
+                        TeleportIfFar(targetCFrame)
+                    end
+                
+                -- [ 2. Chuỗi nhiệm vụ phụ (Torch, Cup, Mob Leader, Relic) ]
+                else
+                    
+                    local sickManQuestStatus = CommF:InvokeServer("ProQuestProgress", "SickMan")
+                    local richSonQuestStatus = CommF:InvokeServer("ProQuestProgress", "RichSon") or 0
+
+                    -- A. Quest Torch (Burn)
+                    if Map.Desert.Burn.Part.Transparency == 0 then
+                        print("[Auto Saber] Đang làm Quest Torch (Đốt nhà SickMan)...")
+
+                        local TorchPos = CFrame.new(1115, 5, 4350)
+                        local TorchGetPos = CFrame.new(-1610, 12, 164)
+
+                        if LocalPlayer.Backpack:FindFirstChild("Torch") or LocalChar:FindFirstChild("Torch") then
+                             EquipWeapon("Torch") 
+                             TeleportIfFar(TorchPos)
+                        else
+                             TeleportIfFar(TorchGetPos)
+                        end
+                    
+                    -- B. Quest Cup và SickMan
+                    elseif sickManQuestStatus == 0 or sickManQuestStatus == nil then
+                         print("[Auto Saber] Đang làm Quest Cup/SickMan...")
+                         
+                         local SickManPos = CFrame.new(1657, 12, 4390) -- Vị trí SickMan
+                         local WaterSourcePos = CFrame.new(-1255, 12, 4515) -- Vị trí lấy nước
+                         
+                         if not LocalChar:FindFirstChild("Cup") or LocalChar:FindFirstChild("Cup").Parent ~= LocalChar then
+                            -- 1. Lấy Cup
+                            TeleportIfFar(WaterSourcePos)
+                            CommF:InvokeServer("ProQuestProgress","GetCup")
+                            task.wait(1)
+                            
+                            -- 2. Đổ đầy Cup
+                            EquipWeapon("Cup")
+                            if LocalChar:FindFirstChild("Cup") then
+                                CommF:InvokeServer("ProQuestProgress","FillCup",LocalChar.Cup)
+                                task.wait(1)
+                            end
+                         end
+                         
+                         -- 3. Đưa cho SickMan
+                         TeleportIfFar(SickManPos)
+                         CommF:InvokeServer("ProQuestProgress","SickMan")
+                         task.wait(1.5)
+                    
+                    -- C. Quest Mob Leader Boss
+                    elseif richSonQuestStatus == 0 then
+                        print("[Auto Saber] Đang làm Quest Mob Leader...")
+                        
+                        local MobLeaderSpawnPos = CFrame.new(-2875, 20, 5415)
+                        TeleportIfFar(MobLeaderSpawnPos) -- TP đến khu vực spawn
+                        
+                        for i,v in pairs(Workspace.Enemies:GetChildren()) do
+                            if v.Name == "Mob Leader" and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                                print("[Auto Saber] Bắt đầu farm Mob Leader...")
+                                repeat task.wait(0.2)
+                                    if not _G.Auto_Saber then break end 
+                                    
+                                    AutoHaki()
+                                    EquipWeapon(_G.SelectWeapon)
+                                    
+                                    -- Chỉ teleport khi khoảng cách lớn hơn 10 (để tránh bị kick)
+                                    if (RootPart.Position - v.HumanoidRootPart.Position).Magnitude > 10 then
+                                        RootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5) 
+                                    end
+
+                                until v.Humanoid.Health <= 0 or not _G.Auto_Saber
+                                print("[Auto Saber] Mob Leader đã bị hạ.")
+                                break
+                            end
+                        end
+                        
+                    -- D. Quest Relic (Blackbeard)
+                    elseif richSonQuestStatus == 1 then
+                         print("[Auto Saber] Đang lấy và đặt Relic...")
+                         CommF:InvokeServer("ProQuestProgress","RichSon") -- Lấy Relic Quest
+                         task.wait(1)
+                         EquipWeapon("Relic")
+                         task.wait(1)
+                         
+                         local RelicPlacementPos = CFrame.new(-1405, 30, 4) -- Vị trí đặt Relic (Jungle)
+                         TeleportIfFar(RelicPlacementPos)
+                         task.wait(1)
+                    end
+                end
+                
+                -- [ 3. Final Boss (Saber Expert) ]
+                if Map.Jungle.Final.Part.Transparency == 1 then
+                     print("[Auto Saber] Cửa Relic đã mở! Chuẩn bị chiến đấu với Saber Expert...")
+
+                     for i,v in pairs(Workspace.Enemies:GetChildren()) do
+                         if v.Name == "Saber Expert" and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                            print("[Auto Saber] Bắt đầu farm Saber Expert...")
+                             repeat task.wait(0.2) 
+                                 if not _G.Auto_Saber then break end 
+
+                                 EquipWeapon(_G.SelectWeapon)
+                                 AutoHaki()
+                                 
+                                 -- Chỉ teleport khi khoảng cách lớn hơn 10
+                                 if (RootPart.Position - v.HumanoidRootPart.Position).Magnitude > 10 then
+                                     RootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 0, 5)
+                                 end
+                                 
+                                 -- Giả lập click chuột để tấn công
+                                 game:GetService'VirtualUser':CaptureController()
+                                 game:GetService'VirtualUser':Button1Down(Vector2.new(1280, 672))
+
+                             until v.Humanoid.Health <= 0 or not _G.Auto_Saber
+                             
+                             if v.Humanoid.Health <= 0 then
+                                 print("[Auto Saber] Saber Expert đã bị hạ. Quest hoàn thành!")
+                                 ToggleAutoSaber() -- Tắt _G.Auto_Saber sau khi hoàn thành
+                                 
+                                 -- BƯỚC 2: KHÔI PHỤC Auto Farm chung
+                                 if _G.AutoFarm == false then
+                                     _G.AutoFarm = true -- Dùng _G.AutoFarm
+                                     print("[Auto Saber] ĐÃ BẬT LẠI (RESUMED) Auto Farm chung.")
+                                 end
+                             end
+                             break
+                         end
+                     end
+                     
+                     if not Workspace.Enemies:FindFirstChild("Saber Expert") then
+                        -- TP về vị trí an toàn sau khi boss chết/không tìm thấy
+                        TeleportIfFar(CFrame.new(-1405, 30, 4))
+                     end
+                end
+
+            end)
+        
+        -- Kiểm tra nếu _G.Auto_Saber bị tắt thủ công, khôi phục Auto Farm
+        elseif not _G.Auto_Saber and _G.AutoFarm == false then
+            _G.AutoFarm = true -- Dùng _G.AutoFarm
+            print("[Auto Saber] ĐÃ BẬT LẠI (RESUMED) Auto Farm chung do _G.Auto_Saber đã tắt.")
+        end
+    end
+end)
