@@ -1,15 +1,4 @@
 local player = game.Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
-
-task.spawn(function()
-    while task.wait(1) do
-        if player.Character and player.Character:FindFirstChildOfClass("Humanoid") then
-            player.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
-local player = game.Players.LocalPlayer
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "DoughOverlay"
@@ -79,5 +68,39 @@ spawn(function()
 			local frags = player.Data.Fragments.Value
 			infoLabel.Text = "Player: " .. player.DisplayName .. " | Level: " .. level .. " | Beli: " .. beli .. " | Fragments: " .. frags
 		end)
+	end
+end)
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 120, 0, 40)
+toggleButton.Position = UDim2.new(0, 15, 0, 70)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.BackgroundTransparency = 0.1
+toggleButton.BorderSizePixel = 0
+toggleButton.Text = "Open"
+toggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+toggleButton.TextScaled = true
+toggleButton.Font = Enum.Font.GothamSemibold
+toggleButton.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = toggleButton
+
+local isOpen = false
+toggleButton.MouseButton1Click:Connect(function()
+	isOpen = not isOpen
+	background.Visible = isOpen
+	toggleButton.Text = isOpen and "Close" or "Open"
+end)
+
+local seconds = 0
+spawn(function()
+	while wait(1) do
+		seconds += 1
+		local hrs = math.floor(seconds / 3600)
+		local mins = math.floor((seconds % 3600) / 60)
+		local secs = seconds % 60
+		timeLabel.Text = "Time: " .. hrs .. " Hours " .. mins .. " Minutes " .. secs .. " Seconds"
 	end
 end)
