@@ -8,8 +8,8 @@ gui.Parent = player:WaitForChild("PlayerGui")
 
 local background = Instance.new("Frame")
 background.Size = UDim2.new(1, 0, 1, 0)
-background.BackgroundColor3 = Color3.new(1, 1, 1)
-background.BackgroundTransparency = 1
+background.BackgroundColor3 = Color3.new(0, 0, 0)
+background.BackgroundTransparency = 1.0
 background.Visible = true
 background.Parent = gui
 
